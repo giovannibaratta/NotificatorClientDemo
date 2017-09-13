@@ -1,14 +1,12 @@
 package it.baratta.giovanni.habitat.notificator.clientdemo
 
-import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.design.widget.Snackbar
-import android.view.View
-import kotlinx.android.synthetic.main.activity_main.*
-import android.widget.TextView
-import android.R.attr.duration
 import android.support.v4.content.ContextCompat
-import org.w3c.dom.Text
+import android.support.v7.app.AppCompatActivity
+import android.view.View
+import android.widget.TextView
+import kotlinx.android.synthetic.main.activity_main.*
 
 
 class MainActivity : AppCompatActivity(), IMainView{
@@ -56,7 +54,7 @@ class MainActivity : AppCompatActivity(), IMainView{
         activityMainMQTTServer.setText("tcp://192.168.0.5:1883")
         activityMainMQTTTopic.setText("HabitatDevice")
         activityMainRegistrationServer.setText("192.168.0.5")
-        activityMainRegistrationServerPort.setText("2000")
+        activityMainRegistrationServerPort.setText("8080")
     }
 
     override fun showUI(show: Boolean) {

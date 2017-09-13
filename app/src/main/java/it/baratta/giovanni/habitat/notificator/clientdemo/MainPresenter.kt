@@ -1,22 +1,43 @@
 package it.baratta.giovanni.habitat.notificator.clientdemo
 
-import android.os.AsyncTask
 import android.util.Log
-import it.baratta.giovanni.habitat.notificator.api.ConfigurationParams
-import it.baratta.giovanni.habitat.notificator.api.ModuleRequest
+import com.google.gson.GsonBuilder
+import it.baratta.giovanni.habitat.notificator.api.request.ConfigurationParams
+import it.baratta.giovanni.habitat.notificator.api.request.ModuleRequest
+import it.baratta.giovanni.habitat.notificator.api.request.RegistrationRequest
+import it.baratta.giovanni.habitat.notificator.api.response.ErrorResponse
+import it.baratta.giovanni.habitat.notificator.api.response.IResponse
+import it.baratta.giovanni.habitat.notificator.api.response.RegistrationResponse
+import it.baratta.giovanni.habitat.notificator.clientdemo.retrofit.NotificatorService
+import it.baratta.giovanni.habitat.notificator.clientdemo.retrofit.ResponseParser
+import it.baratta.giovanni.habitat.notificator.clientdemo.utils.RetrofitCallback
+import retrofit2.Call
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 /**
- * Created by Gio on 11/09/2017.
+ * Presenter per registarsi presso il server centrale tramite richieste REST
  */
 class MainPresenter(private val view : IMainView) : IMainPresenter {
 
-    private var runningTask : AsyncTask<*,*,*>? = null
+    private var retrofitCall : Call<IResponse>? = null
     private var currentToken: String? = null
+
+    val gson = GsonBuilder()
+            .registerTypeAdapter(IResponse::class.java, ResponseParser())
+            .create()
+
+    init {
+        showOnlyUI()
+        view.deregisterButtonEnabled = false
+        view.registerButtonEnabled = true
+        view.registered =false
+    }
 
     override fun register() {
 
-        if(runningTask != null){
-            view.showMessagge("c'è un'altra operazione in corso")
+        if(retrofitCall != null){
+            view.showMessagge("Un'altra operazione è in corso")
             return
         }
 
@@ -63,24 +84,32 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
 
         showOnlyProgress()
 
-        val task = RegistrationTask(serverAddress, serverPort,
-                        this::onSuccessRegistration,this::onErrorRegistration)
-        runningTask = task
-        task.execute(Pair(eventSourceModule,notificatorModule))
-    }
+        val notificatorService = Retrofit.Builder()
+                .baseUrl("http://${serverAddress}:${serverPort}/core_main_Web_exploded/")
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build().create(NotificatorService::class.java)
 
-    companion object {
-        private val mqttServerRegex = Regex("^tcp://\\d{0,3}\\.\\d{0,3}\\.\\d{0,3}\\.\\d{0,3}:\\d{4,5}$")
-        private val serverRegex = Regex("^\\d{0,3}\\.\\d{0,3}\\.\\d{0,3}\\.\\d{0,3}$")
+        val registrationCall = notificatorService
+                .registration(RegistrationRequest(eventSourceModule,notificatorModule))
+
+        retrofitCall = registrationCall
+
+        registrationCall.enqueue(RetrofitCallback<IResponse>(
+                { call, reponse -> onSuccessRegistrationCall(reponse?.body())}, // onSuccess
+                { call, throwable -> onErrorRegistrationCall(throwable)})) // onError
+
     }
 
     override fun deregister() {
-        if(runningTask != null){
+
+        if(retrofitCall != null){
             view.showMessagge("c'è un'altra operazione in corso")
             return
         }
 
-        if(currentToken == null){
+        val token = currentToken
+
+        if(token == null){
             view.showError("Non sei ancora registrato")
             return
         }
@@ -100,60 +129,87 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
 
         showOnlyProgress()
 
-        val task = DeregistrationTask(serverAddress, serverPort,
-                this::onSuccessDeregistration, this::onErrorDeregistration)
-        runningTask = task
-        task.execute(currentToken)
+        val notificatorService = Retrofit.Builder()
+                .baseUrl("http://${serverAddress}:${serverPort}/core_main_Web_exploded/")
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build().create(NotificatorService::class.java)
+
+        val registrationCall = notificatorService
+                .deregistration(token)
+
+        retrofitCall = registrationCall
+
+        registrationCall.enqueue(RetrofitCallback<IResponse>(
+                { call, reponse -> onSuccessDeregistrationCall(reponse?.body())}, // onSuccess
+                { call, throwable -> onErrorDeregistrationCall(throwable)})) // onError
+
     }
 
-    init {
+    private fun onSuccessDeregistrationCall(response: IResponse?){
+        retrofitCall = null
+
+        if(response == null)
+            return
+
+        when(response.error){
+            false ->{
+                currentToken = null
+                view.showMessagge("Deregistrazione avvenuta corretamente")
+            }
+            true ->
+                view.showError("Errore durante la deregistrazione : " +
+                        "${(response as ErrorResponse).errorMsg}")
+        }
+
+        view.registered = response.error
+        view.deregisterButtonEnabled = response.error
+        view.registerButtonEnabled = !response.error
+        view.registrationServerEnabled = !response.error
+        view.registrationServerPortEnabled = !response.error
         showOnlyUI()
-        view.deregisterButtonEnabled = false
-        view.registerButtonEnabled = true
-        view.registered =false
     }
 
-    private fun onSuccessDeregistration(){
-        showOnlyUI()
-        runningTask = null
-        currentToken = null
-        view.showMessagge("Deregistrazione avvenuta corretamente")
-        view.registered = false
-        view.deregisterButtonEnabled = false
-        view.registerButtonEnabled = true
-        view.registrationServerEnabled = true
-        view.registrationServerPortEnabled = true
-    }
-
-    private fun onErrorDeregistration(msg : String){
-        showOnlyUI()
-        runningTask = null
-        view.showError(msg)
+    private fun onErrorDeregistrationCall(throwable: Throwable?){
+        retrofitCall = null
+        view.showError(throwable?.localizedMessage ?: "")
         view.registered = true
         view.deregisterButtonEnabled = true
         view.registerButtonEnabled = false
+        showOnlyUI()
     }
 
 
-    private fun onSuccessRegistration(token : String){
+    private fun onSuccessRegistrationCall(response : IResponse?){
+        retrofitCall = null
+
+        if(response == null)
+            return
+
+        when(response.error){
+           false ->{
+               currentToken = (response as RegistrationResponse).token
+               view.showMessagge(currentToken ?: "")
+           }
+           true -> view.showError("Errore durante la registrazione : " +
+                        "${(response as ErrorResponse).errorMsg}")
+        }
+
+        view.registered = !response.error
+        view.deregisterButtonEnabled = !response.error
+        view.registerButtonEnabled = response.error
+        view.registrationServerEnabled = response.error
+        view.registrationServerPortEnabled = response.error
+
         showOnlyUI()
-        runningTask = null
-        currentToken = token
-        view.showMessagge(token)
-        view.registered = true
-        view.deregisterButtonEnabled = true
-        view.registerButtonEnabled = false
-        view.registrationServerEnabled = false
-        view.registrationServerPortEnabled = false
     }
 
-    private fun onErrorRegistration(msg : String){
-        showOnlyUI()
-        runningTask = null
-        view.showError(msg)
+    private fun onErrorRegistrationCall(throwable: Throwable?){
+        retrofitCall = null
+        view.showError(throwable?.localizedMessage ?: "")
         view.registered = false
         view.deregisterButtonEnabled = false
         view.registerButtonEnabled = true
+        showOnlyUI()
     }
 
     private fun showOnlyUI(){
@@ -166,4 +222,8 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
         view.showProgress(true)
     }
 
+    companion object {
+        private val mqttServerRegex = Regex("^tcp://\\d{0,3}\\.\\d{0,3}\\.\\d{0,3}\\.\\d{0,3}:\\d{4,5}$")
+        private val serverRegex = Regex("^\\d{0,3}\\.\\d{0,3}\\.\\d{0,3}\\.\\d{0,3}$")
+    }
 }
