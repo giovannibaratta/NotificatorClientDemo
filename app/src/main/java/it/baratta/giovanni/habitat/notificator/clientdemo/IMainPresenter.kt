@@ -6,4 +6,7 @@ package it.baratta.giovanni.habitat.notificator.clientdemo
 interface IMainPresenter {
     fun register()
     fun deregister()
+    fun onDesroy()
+    fun onPause()
+    fun onRestart()
 }

@@ -1,17 +1,22 @@
 package it.baratta.giovanni.habitat.notificator.clientdemo
 
+import android.content.Context
 import android.os.Bundle
 import android.support.design.widget.Snackbar
 import android.support.v4.content.ContextCompat
-import android.support.v7.app.AppCompatActivity
 import android.view.View
 import android.widget.TextView
+import com.jakewharton.rxbinding2.widget.RxTextView
+import com.trello.rxlifecycle2.RxLifecycle
+import com.trello.rxlifecycle2.android.ActivityEvent
+import com.trello.rxlifecycle2.components.support.RxAppCompatActivity
+import io.reactivex.Observable
 import kotlinx.android.synthetic.main.activity_main.*
 
 
-class MainActivity : AppCompatActivity(), IMainView{
+class MainActivity : RxAppCompatActivity(), IMainView {
 
-    private lateinit var presenter : IMainPresenter
+    private lateinit var presenter: IMainPresenter
 
     override var registered: Boolean = false
         get() = field
@@ -46,15 +51,24 @@ class MainActivity : AppCompatActivity(), IMainView{
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        presenter = MainPresenter(this)
 
-        activityMainRegistrationButton.setOnClickListener{ presenter.register()}
-        activityMainDeregistrationButton.setOnClickListener{ presenter.deregister()}
+        registrationServerChanged = RxTextView.afterTextChangeEvents(activityMainRegistrationServer)
+                .map { event -> event.view().text.toString() }
+                .compose(RxLifecycle.bindUntilEvent(lifecycle(), ActivityEvent.DESTROY))
+
+        registrationPortChanged = RxTextView.afterTextChangeEvents(activityMainRegistrationServerPort)
+                .map { event -> event.view().text.toString().toIntOrNull()  }
+                .compose(RxLifecycle.bindUntilEvent(lifecycle(), ActivityEvent.DESTROY))
+
+        activityMainRegistrationButton.setOnClickListener { presenter.register() }
+        activityMainDeregistrationButton.setOnClickListener { presenter.deregister() }
         activityMainMQTTSwitch.isChecked = true
         activityMainMQTTServer.setText("tcp://192.168.0.5:1883")
         activityMainMQTTTopic.setText("HabitatDevice")
         activityMainRegistrationServer.setText("192.168.0.5")
         activityMainRegistrationServerPort.setText("8080")
+
+        presenter = MainPresenter(this)
     }
 
     override fun showUI(show: Boolean) {
@@ -66,7 +80,7 @@ class MainActivity : AppCompatActivity(), IMainView{
         activityMainConnessionMessage.visibility = View.GONE
     }
 
-    override fun showProgress(show: Boolean){
+    override fun showProgress(show: Boolean) {
         when (show) {
             true -> {
                 activityMainProgressBar.visibility = View.VISIBLE
@@ -123,4 +137,34 @@ class MainActivity : AppCompatActivity(), IMainView{
             field = value
             activityMainRegistrationServerPort.isEnabled = value
         }
+
+    override val context: Context
+        get() = this
+
+    override fun onRestart() {
+        super.onRestart()
+        presenter.onRestart()
+    }
+
+    override fun onPause() {
+        presenter.onPause()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        presenter.onDesroy()
+        super.onDestroy()
+    }
+
+    override fun showRegistrationStatusProgress(show: Boolean) {
+        when(show){
+            true -> activityMainRegistrationStatusProgress.visibility = View.VISIBLE
+            false -> activityMainRegistrationStatusProgress.visibility = View.INVISIBLE
+        }
+    }
+
+    override lateinit var registrationServerChanged: Observable<String>
+        private set
+    override lateinit var registrationPortChanged: Observable<Int>
+        private set
 }
