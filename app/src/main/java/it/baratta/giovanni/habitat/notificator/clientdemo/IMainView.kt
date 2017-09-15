@@ -20,11 +20,18 @@ interface IMainView {
     var registered : Boolean
     var registerButtonEnabled : Boolean
     var deregisterButtonEnabled : Boolean
-    val registrationServer : String
-    val registrationPort: Int?
+    var registrationServer : String
+    var registrationPort: Int
     var registrationServerEnabled : Boolean
     var registrationServerPortEnabled : Boolean
     fun showRegistrationStatusProgress(show : Boolean)
     val registrationServerChanged : Observable<String>
     val registrationPortChanged : Observable<Int>
+
+    /**
+     * Permette di bloccare/sbloccare tutti i campi editabile e i tasti
+     * ad esclusione dei tasti di registrazione/deregistration
+     * @param lock true blocca i campi, false li sblocca e li rende modificabili
+     */
+    fun lockInteractiveComponents(lock : Boolean)
 }

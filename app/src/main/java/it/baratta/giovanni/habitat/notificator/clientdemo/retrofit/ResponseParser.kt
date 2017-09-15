@@ -16,6 +16,9 @@ class ResponseParser : JsonDeserializer<IResponse>{
         // campo nella stringa json da utilizzare per il recupera il tipo
         // di oggetto da parsare
         private val classField = "className"
+        val customGson = GsonBuilder()
+                .registerTypeAdapter(IResponse::class.java, ResponseParser())
+                .create()
     }
 
     override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): IResponse {

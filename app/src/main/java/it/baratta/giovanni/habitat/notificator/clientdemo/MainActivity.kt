@@ -57,7 +57,7 @@ class MainActivity : RxAppCompatActivity(), IMainView {
                 .compose(RxLifecycle.bindUntilEvent(lifecycle(), ActivityEvent.DESTROY))
 
         registrationPortChanged = RxTextView.afterTextChangeEvents(activityMainRegistrationServerPort)
-                .map { event -> event.view().text.toString().toIntOrNull()  }
+                .map { event -> event.view().text.toString().toIntOrNull() ?: 0 }
                 .compose(RxLifecycle.bindUntilEvent(lifecycle(), ActivityEvent.DESTROY))
 
         activityMainRegistrationButton.setOnClickListener { presenter.register() }
@@ -118,11 +118,18 @@ class MainActivity : RxAppCompatActivity(), IMainView {
         val snackbar = Snackbar.make(activityMainContainer, msg, Snackbar.LENGTH_LONG).show()
     }
 
-    override val registrationServer: String
+    override var registrationServer: String
         get() = activityMainRegistrationServer.text.toString()
+        set(value) = activityMainRegistrationServer.setText(value)
 
-    override val registrationPort: Int?
-        get() = activityMainRegistrationServerPort.text.toString().toIntOrNull()
+    override var registrationPort: Int
+        get(){
+            return activityMainRegistrationServerPort.text.toString().toIntOrNull() ?: 0
+        }
+        set(value){
+            if(value != null)
+                activityMainRegistrationServerPort.setText(value.toString())
+        }
 
     override var registrationServerEnabled: Boolean = true
         get() = field
@@ -167,4 +174,13 @@ class MainActivity : RxAppCompatActivity(), IMainView {
         private set
     override lateinit var registrationPortChanged: Observable<Int>
         private set
+
+    override fun lockInteractiveComponents(lock: Boolean) {
+        activityMainMQTTTopic.isEnabled = !lock
+        activityMainRegistrationServerPort.isEnabled = !lock
+        activityMainRegistrationServer.isEnabled =!lock
+        activityMainMQTTSwitch.isEnabled = !lock
+        activityMainFCMSwitch.isEnabled = !lock
+        activityMainMQTTServer.isEnabled = !lock
+    }
 }

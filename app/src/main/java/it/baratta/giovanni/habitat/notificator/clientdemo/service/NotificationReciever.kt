@@ -1,7 +1,5 @@
 package it.baratta.giovanni.habitat.notificator.clientdemo.service
 
-import android.app.NotificationManager
-import android.content.Context
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -24,13 +22,13 @@ class NotificationReciever() : NotificationListenerService() {
             return
 
         Log.d("gioTAG", "Ho rilevato una notifica - ${counter++}-  ${sbn?.packageName}")
-        if(sbn.id < 5000){
+        /*if(sbn.id < 5000){
             Log.d("gioTAG", "rimuovo")
             /* Eliminare una notifica */
             val notificationManager = this
                     .getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.cancel(sbn.id)
-        }
+        }*/
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {

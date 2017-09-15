@@ -21,9 +21,10 @@ class BootServiceInitializer : BroadcastReceiver() {
         if(intent.action != Intent.ACTION_BOOT_COMPLETED)
             return
 
-        Log.d("gioTag", "Avvio servizio on BOOT")
+        Log.d("ClientDemo", "Avvio servizio on BOOT")
         // avvio il foreground service
         val intent : Intent = Intent(ctx, MqttForegroundService::class.java)
+        intent.setAction(MqttForegroundService.RESTORE_ACTION)
         ctx.startService(intent)
     }
 

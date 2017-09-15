@@ -2,7 +2,6 @@ package it.baratta.giovanni.habitat.notificator.clientdemo
 
 import android.content.Intent
 import android.util.Log
-import com.google.gson.GsonBuilder
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
@@ -15,14 +14,8 @@ import it.baratta.giovanni.habitat.notificator.api.response.RegistrationResponse
 import it.baratta.giovanni.habitat.notificator.api.response.StatusResponse
 import it.baratta.giovanni.habitat.notificator.clientdemo.persistence.FilePersistence
 import it.baratta.giovanni.habitat.notificator.clientdemo.persistence.PropertiesFile
-import it.baratta.giovanni.habitat.notificator.clientdemo.retrofit.NotificatorService
-import it.baratta.giovanni.habitat.notificator.clientdemo.retrofit.ResponseParser
+import it.baratta.giovanni.habitat.notificator.clientdemo.retrofit.RestAsyncInteractor
 import it.baratta.giovanni.habitat.notificator.clientdemo.service.MqttForegroundService
-import it.baratta.giovanni.habitat.notificator.clientdemo.utils.RetrofitCallback
-import okhttp3.HttpUrl
-import retrofit2.Call
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -32,9 +25,9 @@ import java.util.concurrent.TimeUnit
  */
 class MainPresenter(private val view : IMainView) : IMainPresenter {
 
-    /* se != da null -> invocazione REST in corso */
-    private var retrofitCall : Call<IResponse>? = null
-    private var retrofitStatusCall : Call<IResponse>? = null
+    private var unkownRegisteredStatus = true
+
+    private var restInteractor : RestAsyncInteractor
     /* se != da null -> sono registrato con il seguente token */
     private var currentToken: String? = null
     /* file utilizzato per salvare le informazioni sullo stato della
@@ -44,10 +37,6 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
     private val propertiesFile : PropertiesFile
     private var subscription : Disposable
 
-    val gson = GsonBuilder()
-            .registerTypeAdapter(IResponse::class.java, ResponseParser())
-            .create()
-
     init {
         showOnlyUI()
         view.showRegistrationStatusProgress(false)
@@ -56,82 +45,79 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
                         .mergeWith(view.registrationPortChanged
                                     .map{value -> value.toString()})
                         .debounce(debounceTime, TimeUnit.MILLISECONDS)
-                        .map { value ->  }
+                        .map { value -> }
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(this::serverChanged)
 
+
+        view.showRegistrationStatusProgress(false)
         view.deregisterButtonEnabled = false
         view.registerButtonEnabled = true
         view.registered =false
 
         propertiesFile= PropertiesFile(File(view.context.filesDir,FilePersistence.SERVICE_CONFIGURATION_FILE),
                                     true, false)
+
+        currentToken = propertiesFile.getProperty(TOKEN_PROPERTY)
+        view.registrationServer = propertiesFile.getProperty(SERVER_PROPERTY) ?: "192.168.0.5"
+        view.registrationPort = propertiesFile.getProperty(PORT_PROPERTY)?.toIntOrNull() ?: 8080
+
+        restInteractor =
+                RestAsyncInteractor("http://${view.registrationServer}:${view.registrationPort}/core_main_Web_exploded/")
+
+        val token = currentToken
+        // se ancora non ho effettuao operazioni ed è presente un token di esecuzioni precedenti
+        // non terminate correttamente provo a verificare lo stato
+        if(unkownRegisteredStatus && token != null) {
+            view.showRegistrationStatusProgress(true)
+            restInteractor.status(token, this :: onSuccessStatusCall,
+                    {view.showRegistrationStatusProgress(false)}) //onError
+        }
     }
 
+    /**
+     * Invocato quando l'indirizo del server o la sua porta cambiano,
+     * aggiorna il rest interactor con i nuovi dati
+     */
     private fun serverChanged(value : Unit){
-        val token = propertiesFile.getProperty(TOKEN_PROPERTY) ?: "das"
-        if( token == null) {
-            view.showRegistrationStatusProgress(false)
-            return
-        }
-
-        retrofitStatusCall?.cancel()
-        retrofitStatusCall = null
 
         val serverAddress = view.registrationServer
         val serverPort = view.registrationPort
 
         if(serverPort == null || serverPort < 1024 || serverPort > 65536
             || !serverRegex.matches(serverAddress)){
-            view.showRegistrationStatusProgress(false)
+            view.registerButtonEnabled = false
             return
         }
-
-        view.showRegistrationStatusProgress(true)
-
-        val notificatorService = Retrofit.Builder()
-                .baseUrl("http://${serverAddress}:${serverPort}/core_main_Web_exploded/")
-                .addConverterFactory(GsonConverterFactory.create(gson))
-                .build().create(NotificatorService::class.java)
-
-        retrofitStatusCall = notificatorService.registrationStatus(token)
-        retrofitStatusCall?.enqueue(RetrofitCallback<IResponse>(
-                { call, response -> onSuccessStatusCall(response?.body(), call?.request()?.url())},
-                { call, throwable -> }))
+        view.registerButtonEnabled = true
+        // se sono dati validi creo un nuovo interactor
+        restInteractor.cancelTask()
+        restInteractor =
+                RestAsyncInteractor("http://${serverAddress}:${serverPort}/core_main_Web_exploded/")
     }
 
-    private fun onSuccessStatusCall(response : IResponse?, server : HttpUrl?){
-        retrofitStatusCall = null
-
-        if(response == null || server == null)
-            return
-
+    private fun onSuccessStatusCall(response : IResponse){
         when(response.error){
             false->{
                 val castedResponse = response as StatusResponse
                 if(response.registered){
-                    registerClient(castedResponse.token, server)
+                    registerClient(castedResponse.token)
                 }else{
                     deregisterClient()
                 }
+                unkownRegisteredStatus = false
             }
             true -> view.showError("Errore durante il recupero dello stato")
         }
         view.showRegistrationStatusProgress(false)
     }
 
-
     /**
      * Effettuo una richiesta di registrazione agli event source e notificator
      * tramite invocazione REST
      */
     override fun register() {
-
-        if(retrofitCall != null){
-            view.showMessagge("Un'altra operazione è in corso")
-            return
-        }
 
         // recupero i dati e preparo la richiesta
         val eventSourceModule
@@ -146,7 +132,6 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
         if(view.mqttEnabled){
             val server = view.mqttServer
             if(mqttServerRegex.matches(server)){
-                Log.d("gioTAG","MainPresenter - register : ${server}")
                 val parms = HashMap<String, String>()
                 parms.put("server",server)
                 parms.put("topic",view.mqttTopic)
@@ -176,19 +161,9 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
 
         showOnlyProgress()
 
-        val notificatorService = Retrofit.Builder()
-                .baseUrl("http://${serverAddress}:${serverPort}/core_main_Web_exploded/")
-                .addConverterFactory(GsonConverterFactory.create(gson))
-                .build().create(NotificatorService::class.java)
-
-        val registrationCall = notificatorService
-                .registration(RegistrationRequest(eventSourceModule,notificatorModule))
-
-        retrofitCall = registrationCall
-
-        registrationCall.enqueue(RetrofitCallback<IResponse>(
-                { call, reponse -> onSuccessRegistrationCall(reponse?.body(),call?.request()?.url())}, // onSuccess
-                { call, throwable -> onErrorRegistrationCall(throwable)})) // onError
+        restInteractor.registration(RegistrationRequest(eventSourceModule, notificatorModule),
+                                    this::onSuccessRegistrationCall,
+                                    this::onErrorRegistrationCall, true)
 
     }
 
@@ -197,10 +172,6 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
      */
     override fun deregister() {
 
-        if(retrofitCall != null){
-            view.showMessagge("c'è un'altra operazione in corso")
-            return
-        }
 
         val token = currentToken
 
@@ -224,47 +195,23 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
 
         showOnlyProgress()
 
-        val notificatorService = Retrofit.Builder()
-                .baseUrl("http://${serverAddress}:${serverPort}/core_main_Web_exploded/")
-                .addConverterFactory(GsonConverterFactory.create(gson))
-                .build().create(NotificatorService::class.java)
-
-        val registrationCall = notificatorService
-                .deregistration(token)
-
-        retrofitCall = registrationCall
-
-        registrationCall.enqueue(RetrofitCallback<IResponse>(
-                { call, response -> onSuccessDeregistrationCall(response?.body())}, // onSuccess
-                { call, throwable -> onErrorDeregistrationCall(throwable)})) // onError
+       restInteractor.deregistration(token,
+                    this::onSuccessDeregistrationCall,
+                    this::onErrorDeregistrationCall,
+               true)
 
     }
 
     /**
      * Callback per la richiesta REST di deregitrazione
      */
-    private fun onSuccessDeregistrationCall(response: IResponse?){
-        retrofitCall = null
-
-        if(response == null)
-            return
+    private fun onSuccessDeregistrationCall(response: IResponse){
 
         when(response.error){
-            false ->{
-                currentToken = null
-                view.showMessagge("Deregistrazione avvenuta corretamente")
-            }
-            true ->
-                view.showError("Errore durante la deregistrazione : " +
+            false -> deregisterClient()
+            true -> view.showError("Errore durante la deregistrazione : " +
                         "${(response as ErrorResponse).errorMsg}")
         }
-
-        view.registered = response.error
-        view.deregisterButtonEnabled = response.error
-        view.registerButtonEnabled = !response.error
-        view.registrationServerEnabled = !response.error
-        view.registrationServerPortEnabled = !response.error
-
         showOnlyUI()
     }
 
@@ -272,7 +219,7 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
      * Callback per la richiesta REST di deregistrazione
      */
     private fun onErrorDeregistrationCall(throwable: Throwable?){
-        retrofitCall = null
+        //retrofitCall = null
         view.showError(throwable?.localizedMessage ?: "")
         view.registered = true
         view.deregisterButtonEnabled = true
@@ -280,70 +227,64 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
         showOnlyUI()
     }
 
-
     /**
      * Callback per la richiesta REST di registrazione
      */
-    private fun onSuccessRegistrationCall(response : IResponse?, server: HttpUrl?){
-        retrofitCall = null
-
-        if(response == null || server  == null)
-            return
-
+    private fun onSuccessRegistrationCall(response : IResponse){
         when(response.error){
            false ->{
-               currentToken = (response as RegistrationResponse).token
-               registerClient((response as RegistrationResponse).token, server)
-               view.showMessagge(currentToken ?: "")
-
-               // mi attacco al foreground service
-               val intent : Intent = Intent(view.context, MqttForegroundService::class.java)
-               view.context.startService(intent)
+               val token = (response as RegistrationResponse).token
+               view.showMessagge(token ?: "")
+               registerClient(token)
            }
            true -> view.showError("Errore durante la registrazione : " +
                         "${(response as ErrorResponse).errorMsg}")
         }
 
-        view.registered = !response.error
-        view.deregisterButtonEnabled = !response.error
-        view.registerButtonEnabled = response.error
-        view.registrationServerEnabled = response.error
-        view.registrationServerPortEnabled = response.error
-
         showOnlyUI()
     }
 
-    private fun registerClient(token : String, server: HttpUrl){
+    private fun registerClient(token : String){
+        Log.d("ClientDemo","Registro il cliente")
+        propertiesFile.setProperty(SERVER_PROPERTY, view.registrationServer)
+        propertiesFile.setProperty(PORT_PROPERTY, view.registrationPort.toString())
         propertiesFile.setProperty(TOKEN_PROPERTY, token)
-        propertiesFile.setProperty(SERVER_PROPERTY, server.host())
-        propertiesFile.setProperty(PORT_PROPERTY, server.port().toString())
         propertiesFile.update()
         currentToken = token
+        // avvio mqtt sul servizio di foreground
+        val serviceIntent = Intent(view.context, MqttForegroundService::class.java)
+        serviceIntent.putExtra(MQTT_SERVER, view.mqttServer)
+        serviceIntent.putExtra(MQTT_TOPIC, view.mqttTopic)
+        serviceIntent.putExtra(TOKEN_PROPERTY, token)
+        serviceIntent.action = MqttForegroundService.START_NEW_CONNECTION_ACTION
+        view.context.startService(serviceIntent)
+
         view.registered = true
+        view.lockInteractiveComponents(true)
         view.deregisterButtonEnabled = true
         view.registerButtonEnabled = false
-        view.registrationServerEnabled = false
-        view.registrationServerPortEnabled = false
     }
 
     private fun deregisterClient(){
-        propertiesFile.removeProperty(TOKEN_PROPERTY)
         propertiesFile.removeProperty(SERVER_PROPERTY)
         propertiesFile.removeProperty(PORT_PROPERTY)
+        propertiesFile.removeProperty(TOKEN_PROPERTY)
         propertiesFile.update()
-
+        // avvio mqtt sul servizio di foreground
+        val serviceIntent = Intent(view.context, MqttForegroundService::class.java)
+        serviceIntent.action = MqttForegroundService.CLOSE_CONNECTION_ACTION
+        view.context.startService(serviceIntent)
+        currentToken = null
         view.registered = false
+        view.lockInteractiveComponents(false)
         view.deregisterButtonEnabled = false
         view.registerButtonEnabled = true
-        view.registrationServerEnabled = true
-        view.registrationServerPortEnabled = true
     }
 
     /**
      * Callback per la richiesta REST di registrazione
      */
     private fun onErrorRegistrationCall(throwable: Throwable?){
-        retrofitCall = null
         view.showError(throwable?.localizedMessage ?: "")
         view.registered = false
         view.deregisterButtonEnabled = false
@@ -380,5 +321,8 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
         const val TOKEN_PROPERTY = "token"
         const val SERVER_PROPERTY = "server"
         const val PORT_PROPERTY = "port"
+        const val MQTT_SERVER = "mqttserver"
+        const val MQTT_TOPIC = "mqtttopic"
+        const val MQTT_QOS = "qoslevel"
     }
 }
