@@ -6,6 +6,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.IBinder
+import android.os.PowerManager
 import android.support.v4.app.NotificationCompat
 import android.util.Log
 import com.google.gson.Gson
@@ -27,6 +28,7 @@ class MqttForegroundService : Service() {
 
     private var mqttClient: MqttAndroidClient? = null
     private val mqttOptions = MqttConnectOptions()
+    private lateinit var wakeLock : PowerManager.WakeLock
 
     private fun updateStatusMessage(msg : String){
         val builder = NotificationCompat.Builder(this, "MqttForegroundService")
@@ -40,6 +42,8 @@ class MqttForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        val manager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = manager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"MqttServiceLock")
         Log.d("ClientDemo" , "Avvio MqttForeground service")
         val builder = NotificationCompat.Builder(this, "MqttForegroundService")
                 .setSmallIcon(R.drawable.sym_def_app_icon)
@@ -56,6 +60,8 @@ class MqttForegroundService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
+        wakeLock.acquire()
+
         if(intent  != null)
             when(intent.action){
                 RESTORE_ACTION -> tryRestoreConnection()
@@ -71,6 +77,10 @@ class MqttForegroundService : Service() {
         Log.d("ClientDemo","Disconnetto il client")
         mqttClient?.close()
         mqttClient = null
+        updateStatusMessage("Non connesso")
+        wakeLock.release()
+        stopForeground(false)
+
     }
 
     private fun tryRestoreConnection(){
@@ -161,6 +171,8 @@ class MqttForegroundService : Service() {
                 .setSmallIcon(R.drawable.btn_star)
                 .setContentTitle("MqttNotification")
                 .setContentText("${msg.source} - ${msg.id}")
+
+        builder.extras.putString(NotificationReciever.PAYLOAD, sb.toString())
 
         val nManager = this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nManager.notify(msg.id, builder.build())

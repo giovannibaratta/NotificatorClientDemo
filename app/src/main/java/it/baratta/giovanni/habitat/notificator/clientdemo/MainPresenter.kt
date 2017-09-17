@@ -1,6 +1,9 @@
 package it.baratta.giovanni.habitat.notificator.clientdemo
 
+import android.content.Context
 import android.content.Intent
+import android.net.wifi.WifiManager
+import android.telephony.TelephonyManager
 import android.util.Log
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
@@ -25,6 +28,7 @@ import java.util.concurrent.TimeUnit
  */
 class MainPresenter(private val view : IMainView) : IMainPresenter {
 
+    /* All'avvio non so se il mio token di registrazione è valido */
     private var unkownRegisteredStatus = true
 
     private var restInteractor : RestAsyncInteractor
@@ -36,6 +40,9 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
      */
     private val propertiesFile : PropertiesFile
     private var subscription : Disposable
+
+    private val wifiManager : WifiManager
+    private val telephonyManager : TelephonyManager
 
     init {
         showOnlyUI()
@@ -55,6 +62,9 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
         view.deregisterButtonEnabled = false
         view.registerButtonEnabled = true
         view.registered =false
+
+        wifiManager = view.context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        telephonyManager = view.context.applicationContext.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 
         propertiesFile= PropertiesFile(File(view.context.filesDir,FilePersistence.SERVICE_CONFIGURATION_FILE),
                                     true, false)
@@ -118,6 +128,13 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
      * tramite invocazione REST
      */
     override fun register() {
+
+        // verifico la presenza della rete
+        if(wifiManager.connectionInfo.networkId == -1 &&
+                telephonyManager.dataState != TelephonyManager.DATA_CONNECTED){
+            view.showError("Non sei connesso alla rete")
+            return
+        }
 
         // recupero i dati e preparo la richiesta
         val eventSourceModule
