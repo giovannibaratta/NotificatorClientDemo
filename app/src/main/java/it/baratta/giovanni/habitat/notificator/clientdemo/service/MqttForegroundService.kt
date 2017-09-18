@@ -175,7 +175,7 @@ class MqttForegroundService : Service() {
         builder.extras.putString(NotificationReciever.PAYLOAD, sb.toString())
 
         val nManager = this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nManager.notify(msg.id, builder.build())
+        nManager.notify(msg.id.toInt(), builder.build())
     }
 
     companion object {

@@ -19,9 +19,10 @@ import it.baratta.giovanni.habitat.notificator.api.Message
  * evitare il parsing ogni volta.
  */
 class NotificationReciever() : NotificationListenerService() {
-
-    private val receivedMessage = HashMap<String, HashSet<Int>>()
-    private val dismissedMessage = HashMap<Pair<String, Int>, Boolean>()
+    /* mappa <nomeSorgente,Set<idMessaggio>> */
+    private val receivedMessage = HashMap<String, HashSet<Long>>()
+    /* mappa <nomeSorgente,idMessaggio>, Boolean */
+    private val dismissedMessage = HashMap<Pair<String, Long>, Boolean>()
 
     private lateinit var notificationManager : NotificationManager
 
@@ -52,7 +53,7 @@ class NotificationReciever() : NotificationListenerService() {
         if(arrivedMessage != null && arrivedMessage.contains(msg.id)) {
             Log.d("ClientDemo", "Notifica duplicata da ${msg.source} con ID ${msg.id}")
             if(dismissedMessage[Pair(msg.source,msg.id)] ?: false)
-                notificationManager.cancel(msg.id)
+                notificationManager.cancel(msg.id.toInt())
             return
         }
 
