@@ -18,6 +18,51 @@ class MainActivity : RxAppCompatActivity(), IMainView {
 
     private lateinit var presenter: IMainPresenter
 
+    private val interactiveComponent by lazy { arrayOf(activityMainMQTTTopic,
+                                                activityMainRegistrationServer,
+                                                activityMainMQTTSwitch,
+                                                activityMainFCMSwitch,
+                                                activityMainMQTTServer,
+                                                activityMainSEPASwitch,
+                                                activityMainSEPAQuery,
+                                                activityMainPingSwitch
+                                                )}
+
+    /* INPUT */
+
+    override val mqttEnabled: Boolean
+        get() = activityMainMQTTSwitch.isChecked
+
+    override val mqttServer: String
+        get() = activityMainMQTTServer.text.toString()
+
+    override val fcmEnabled: Boolean
+        get() = activityMainFCMSwitch.isChecked
+
+    override val fcmServer: String
+        get() = activityFCMServer.text.toString()
+
+    override val mqttTopic: String
+        get() = activityMainMQTTTopic.text.toString()
+
+    override var registrationServer: String
+        get() = activityMainRegistrationServer.text.toString()
+        set(value) = activityMainRegistrationServer.setText(value)
+
+    override val sepaEnabled: Boolean
+        get() = activityMainSEPASwitch.isChecked
+
+    override val pingEnabled: Boolean
+        get() = activityMainPingSwitch.isChecked
+
+    override val sepaServer: String
+        get() = activityMainSEPAServer.text.toString()
+
+    override val sepaQuery: String
+        get() = activityMainSEPAQuery.text.toString()
+
+    /* UI */
+
     override var registered: Boolean = false
         get() = field
         set(value) {
@@ -56,17 +101,13 @@ class MainActivity : RxAppCompatActivity(), IMainView {
                 .map { event -> event.view().text.toString() }
                 .compose(RxLifecycle.bindUntilEvent(lifecycle(), ActivityEvent.DESTROY))
 
-        registrationPortChanged = RxTextView.afterTextChangeEvents(activityMainRegistrationServerPort)
-                .map { event -> event.view().text.toString().toIntOrNull() ?: 0 }
-                .compose(RxLifecycle.bindUntilEvent(lifecycle(), ActivityEvent.DESTROY))
 
         activityMainRegistrationButton.setOnClickListener { presenter.register() }
         activityMainDeregistrationButton.setOnClickListener { presenter.deregister() }
         activityMainMQTTSwitch.isChecked = true
         activityMainMQTTServer.setText("tcp://192.168.0.5:1883")
         activityMainMQTTTopic.setText("HabitatDevice")
-        activityMainRegistrationServer.setText("192.168.0.5")
-        activityMainRegistrationServerPort.setText("8080")
+        activityMainRegistrationServer.setText("192.168.0.5:8080/core_main_Web_exploded/")
 
         presenter = MainPresenter(this)
     }
@@ -93,15 +134,6 @@ class MainActivity : RxAppCompatActivity(), IMainView {
         }
     }
 
-    override val mqttEnabled: Boolean
-        get() = activityMainMQTTSwitch.isChecked
-
-    override val mqttServer: String
-        get() = activityMainMQTTServer.text.toString()
-
-    override val fcmEnabled: Boolean
-        get() = activityMainFCMSwitch.isChecked
-
     override fun showError(msg: String) {
         val snackbar = Snackbar.make(activityMainContainer, msg, Snackbar.LENGTH_LONG)
         val snackbarView = snackbar.getView()
@@ -111,38 +143,15 @@ class MainActivity : RxAppCompatActivity(), IMainView {
         snackbar.show()
     }
 
-    override val mqttTopic: String
-        get() = activityMainMQTTTopic.text.toString()
-
     override fun showMessagge(msg: String) {
         val snackbar = Snackbar.make(activityMainContainer, msg, Snackbar.LENGTH_LONG).show()
     }
-
-    override var registrationServer: String
-        get() = activityMainRegistrationServer.text.toString()
-        set(value) = activityMainRegistrationServer.setText(value)
-
-    override var registrationPort: Int
-        get(){
-            return activityMainRegistrationServerPort.text.toString().toIntOrNull() ?: 0
-        }
-        set(value){
-            if(value != null)
-                activityMainRegistrationServerPort.setText(value.toString())
-        }
 
     override var registrationServerEnabled: Boolean = true
         get() = field
         set(value) {
             field = value
             activityMainRegistrationServer.isEnabled = value
-        }
-
-    override var registrationServerPortEnabled: Boolean = true
-        get() = field
-        set(value) {
-            field = value
-            activityMainRegistrationServerPort.isEnabled = value
         }
 
     override val context: Context
@@ -172,15 +181,8 @@ class MainActivity : RxAppCompatActivity(), IMainView {
 
     override lateinit var registrationServerChanged: Observable<String>
         private set
-    override lateinit var registrationPortChanged: Observable<Int>
-        private set
 
-    override fun lockInteractiveComponents(lock: Boolean) {
-        activityMainMQTTTopic.isEnabled = !lock
-        activityMainRegistrationServerPort.isEnabled = !lock
-        activityMainRegistrationServer.isEnabled =!lock
-        activityMainMQTTSwitch.isEnabled = !lock
-        activityMainFCMSwitch.isEnabled = !lock
-        activityMainMQTTServer.isEnabled = !lock
-    }
+    override fun lockInteractiveComponents(lock: Boolean)
+        = interactiveComponent.forEach { it.isEnabled = !lock }
+
 }

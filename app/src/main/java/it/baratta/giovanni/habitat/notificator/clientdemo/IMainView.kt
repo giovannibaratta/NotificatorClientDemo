@@ -9,24 +9,30 @@ import io.reactivex.Observable
 interface IMainView {
 
     val context : Context
-    fun showUI(show : Boolean)
-    fun showProgress(show : Boolean)
-    val mqttEnabled : Boolean
+
+    /* INPUT */
     val mqttServer : String
     val mqttTopic : String
+    var registrationServer : String
+    val mqttEnabled : Boolean
     val fcmEnabled : Boolean
+    val fcmServer : String
+    val sepaEnabled : Boolean
+    val pingEnabled : Boolean
+    val sepaServer : String
+    val sepaQuery : String
+
+    /* UI */
+    fun showUI(show : Boolean)
+    fun showProgress(show : Boolean)
     fun showError(msg : String)
     fun showMessagge(msg : String)
     var registered : Boolean
     var registerButtonEnabled : Boolean
     var deregisterButtonEnabled : Boolean
-    var registrationServer : String
-    var registrationPort: Int
     var registrationServerEnabled : Boolean
-    var registrationServerPortEnabled : Boolean
     fun showRegistrationStatusProgress(show : Boolean)
     val registrationServerChanged : Observable<String>
-    val registrationPortChanged : Observable<Int>
 
     /**
      * Permette di bloccare/sbloccare tutti i campi editabile e i tasti

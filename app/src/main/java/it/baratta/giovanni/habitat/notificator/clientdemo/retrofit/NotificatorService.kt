@@ -17,5 +17,4 @@ interface NotificatorService {
 
     @GET("rest/registrationStatus")
     fun registrationStatus(@Query("token") token : String) : Call<IResponse>
-
 }

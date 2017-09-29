@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.wifi.WifiManager
 import android.telephony.TelephonyManager
 import android.util.Log
+import com.google.firebase.iid.FirebaseInstanceId
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
@@ -20,7 +21,6 @@ import it.baratta.giovanni.habitat.notificator.clientdemo.persistence.Properties
 import it.baratta.giovanni.habitat.notificator.clientdemo.retrofit.RestAsyncInteractor
 import it.baratta.giovanni.habitat.notificator.clientdemo.service.MqttForegroundService
 import java.io.File
-import java.util.*
 import java.util.concurrent.TimeUnit
 
 /**
@@ -49,8 +49,6 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
         view.showRegistrationStatusProgress(false)
 
         subscription =  view.registrationServerChanged
-                        .mergeWith(view.registrationPortChanged
-                                    .map{value -> value.toString()})
                         .debounce(debounceTime, TimeUnit.MILLISECONDS)
                         .map { value -> }
                         .subscribeOn(Schedulers.io())
@@ -71,10 +69,16 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
 
         currentToken = propertiesFile.getProperty(TOKEN_PROPERTY)
         view.registrationServer = propertiesFile.getProperty(SERVER_PROPERTY) ?: "192.168.0.5"
-        view.registrationPort = propertiesFile.getProperty(PORT_PROPERTY)?.toIntOrNull() ?: 8080
 
-        restInteractor =
-                RestAsyncInteractor("http://${view.registrationServer}:${view.registrationPort}/core_main_Web_exploded/")
+        try {
+            restInteractor =
+                    RestAsyncInteractor(view.registrationServer)
+            view.registerButtonEnabled = true
+        }catch (exception : Exception){
+            view.showError("Registration server non valido")
+            view.registerButtonEnabled = false
+            restInteractor = RestAsyncInteractor("http://localhost")
+        }
 
         val token = currentToken
         // se ancora non ho effettuao operazioni ed è presente un token di esecuzioni precedenti
@@ -93,18 +97,19 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
     private fun serverChanged(value : Unit){
 
         val serverAddress = view.registrationServer
-        val serverPort = view.registrationPort
 
-        if(serverPort == null || serverPort < 1024 || serverPort > 65536
-            || !serverRegex.matches(serverAddress)){
-            view.registerButtonEnabled = false
-            return
-        }
         view.registerButtonEnabled = true
         // se sono dati validi creo un nuovo interactor
         restInteractor.cancelTask()
-        restInteractor =
-                RestAsyncInteractor("http://${serverAddress}:${serverPort}/core_main_Web_exploded/")
+        try {
+            restInteractor =
+                    RestAsyncInteractor(serverAddress)
+            view.registerButtonEnabled = true
+        }catch (exception : Exception){
+            view.showError("Registration server non valido")
+            view.registerButtonEnabled = false
+            restInteractor = RestAsyncInteractor("http://localhost")
+        }
     }
 
     private fun onSuccessStatusCall(response : IResponse){
@@ -130,59 +135,116 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
     override fun register() {
 
         // verifico la presenza della rete
-        if(wifiManager.connectionInfo.networkId == -1 &&
-                telephonyManager.dataState != TelephonyManager.DATA_CONNECTED){
+        if(!isConnected()){
             view.showError("Non sei connesso alla rete")
             return
         }
 
         // recupero i dati e preparo la richiesta
-        val eventSourceModule
-                = listOf(ModuleRequest("mock", ConfigurationParams(HashMap())))
+        val eventSourceModule = ArrayList<ModuleRequest>()
         val notificatorModule = ArrayList<ModuleRequest>()
-
-        if(view.fcmEnabled){
-            val parms = HashMap<String, String>()
-            // aggiungi il tokne
-            notificatorModule.add(ModuleRequest("fcm", ConfigurationParams(parms)))
-        }
-        if(view.mqttEnabled){
-            val server = view.mqttServer
-            if(mqttServerRegex.matches(server)){
-                val parms = HashMap<String, String>()
-                parms.put("server",server)
-                parms.put("topic",view.mqttTopic)
-                notificatorModule.add(ModuleRequest("mqtt", ConfigurationParams(parms)))
-            }else{
-                view.showError("Il server indicato non è valido")
-                return
-            }
-        }
-        if(notificatorModule.size == 0){
-            view.showError("Devi selezionare almeno un notificator")
-            return
-        }
-
-        val serverAddress = view.registrationServer
-        val serverPort = view.registrationPort
-
-        if(serverPort == null || serverPort < 1024 || serverPort > 65536){
-            view.showError("La porta di registrazione non è valida")
-            return
-        }
-
-        if(!serverRegex.matches(serverAddress)){
-            view.showError("Il server di registrazione non è valido")
-            return
-        }
 
         showOnlyProgress()
 
+        try {
+            if (view.pingEnabled)
+                eventSourceModule.add(readPingSourceInformation())
+
+            if (view.sepaEnabled)
+                eventSourceModule.add(readSepaSourceInformation())
+
+            if (view.fcmEnabled)
+                notificatorModule.add(readFcmNotificationInformation())
+
+            if (view.mqttEnabled)
+                notificatorModule.add(readMqttNotificationInformation())
+        }catch (exception : Exception){
+            showOnlyUI()
+            view.showError(exception.localizedMessage)
+            return
+        }
+
+        if(eventSourceModule.size == 0){
+            showOnlyUI()
+            view.showError(view.context.getString(R.string.event_source_size_error))
+            return
+        }
+
+        if(notificatorModule.size == 0){
+            showOnlyUI()
+            view.showError(view.context.getString(R.string.notificator_size_error))
+            return
+        }
+        
         restInteractor.registration(RegistrationRequest(eventSourceModule, notificatorModule),
                                     this::onSuccessRegistrationCall,
                                     this::onErrorRegistrationCall, true)
 
     }
+
+    private fun readFcmNotificationInformation() : ModuleRequest {
+
+        val server = view.fcmServer
+        val firebaseToken = FirebaseInstanceId.getInstance().token
+
+        if(!isValidFCMServer(server))
+            throw IllegalStateException()
+
+        if(firebaseToken == null)
+            throw IllegalStateException(view.context.getString(R.string.firebase_token_error))
+
+        val parms = ConfigurationParams()
+        parms.setParam("fcmToken", firebaseToken)
+        parms.setParam("fcmProxy", server)
+        return ModuleRequest("fcm", parms)
+    }
+
+    private fun readSepaSourceInformation() : ModuleRequest{
+        val server = view.sepaServer
+        val query = view.sepaQuery
+
+        if(!isValidSEPAServer(server))
+            throw IllegalStateException(view.context.getString(R.string.sepa_server_error))
+
+        if(!isValidSEPAQuery(query))
+            throw  IllegalStateException(view.context.getString(R.string.sepa_query_error))
+
+        val parms = ConfigurationParams()
+        parms.setParam("server",server)
+        parms.setParam("query",query)
+        return ModuleRequest("sepa", parms)
+    }
+
+    private fun readPingSourceInformation() : ModuleRequest
+        = ModuleRequest("ping", ConfigurationParams())
+
+    private fun readMqttNotificationInformation() : ModuleRequest{
+        val server = view.mqttServer
+        val topic = view.mqttTopic
+
+        if(!isValidMqttServer(server))
+            throw IllegalStateException(view.context.getString(R.string.mqtt_server_error))
+
+        if(topic.isBlank())
+            throw  IllegalStateException(view.context.getString(R.string.mqtt_topic_error))
+
+        val parms = ConfigurationParams()
+        parms.setParam("server",server)
+        parms.setParam("topic",topic)
+        return ModuleRequest("mqtt", parms)
+    }
+
+    private fun isValidFCMServer(server: String) : Boolean
+        = !server.isBlank()
+
+    private fun isValidMqttServer(server : String) : Boolean
+        = !server.isBlank()
+
+    private fun isValidSEPAServer(server: String) : Boolean
+        = !server.isBlank()
+
+    private fun isValidSEPAQuery(query : String) : Boolean
+        = !query.isBlank()
 
     /**
      * effettua una richiesta di deregitrazione tramite invocazione REST
@@ -197,22 +259,9 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
             return
         }
 
-        val serverAddress = view.registrationServer
-        val serverPort = view.registrationPort
-
-        if(serverPort == null || serverPort < 1024 || serverPort > 65536){
-            view.showError("La porta di registrazione non è valida")
-            return
-        }
-
-        if(!serverRegex.matches(serverAddress)){
-            view.showError("Il server di registrazione non è valido")
-            return
-        }
-
         showOnlyProgress()
 
-       restInteractor.deregistration(token,
+        restInteractor.deregistration(token,
                     this::onSuccessDeregistrationCall,
                     this::onErrorDeregistrationCall,
                true)
@@ -264,7 +313,6 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
     private fun registerClient(token : String){
         Log.d("ClientDemo","Registro il cliente")
         propertiesFile.setProperty(SERVER_PROPERTY, view.registrationServer)
-        propertiesFile.setProperty(PORT_PROPERTY, view.registrationPort.toString())
         propertiesFile.setProperty(TOKEN_PROPERTY, token)
         propertiesFile.update()
         currentToken = token
@@ -284,7 +332,6 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
 
     private fun deregisterClient(){
         propertiesFile.removeProperty(SERVER_PROPERTY)
-        propertiesFile.removeProperty(PORT_PROPERTY)
         propertiesFile.removeProperty(TOKEN_PROPERTY)
         propertiesFile.update()
         // avvio mqtt sul servizio di foreground
@@ -327,17 +374,18 @@ class MainPresenter(private val view : IMainView) : IMainPresenter {
         view.showProgress(true)
     }
 
+    private fun isConnected() : Boolean
+        = wifiManager.connectionInfo.networkId != -1
+            || telephonyManager.dataState == TelephonyManager.DATA_CONNECTED
+
     override fun onDesroy() { subscription.dispose() }
     override fun onPause() { }
     override fun onRestart() { }
 
     companion object {
-        private val mqttServerRegex = Regex("^tcp://\\d{0,3}\\.\\d{0,3}\\.\\d{0,3}\\.\\d{0,3}:\\d{4,5}$")
-        private val serverRegex = Regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$")
-        private const val debounceTime = 500L
+        private const val debounceTime = 300L
         const val TOKEN_PROPERTY = "token"
         const val SERVER_PROPERTY = "server"
-        const val PORT_PROPERTY = "port"
         const val MQTT_SERVER = "mqttserver"
         const val MQTT_TOPIC = "mqtttopic"
         const val MQTT_QOS = "qoslevel"

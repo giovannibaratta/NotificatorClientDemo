@@ -1,3 +1,11 @@
 <resources>
-    <string name="app_name">ClientDemo</string>
+    <string name="app_name" translatable="false">ClientDemo</string>
+    <string name="mqtt_server_error">Invalid MQTT server</string>
+    <string name="mqtt_topic_error">Invalid MQTT topic</string>
+    <string name="sepa_server_error">Invalid SEPA server</string>
+    <string name="sepa_query_error">Invalid SEPA query</string>
+    <string name="firebase_token_error">Firebase token not ready</string>
+    <string name="firebase_server_error">Invalid FCM server</string>
+    <string name="notificator_size_error">Select al least one notificator</string>
+    <string name="event_source_size_error">Select al least one event source</string>
 </resources>

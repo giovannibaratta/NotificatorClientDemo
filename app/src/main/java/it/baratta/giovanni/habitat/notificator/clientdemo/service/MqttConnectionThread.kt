@@ -35,17 +35,16 @@ class MqttConnectionThread(private val context : Context,
         Log.d("ClientDemo","token presente ${token}")
 
         val server = properties.getProperty(MainPresenter.SERVER_PROPERTY)
-        val port = properties.getProperty(MainPresenter.PORT_PROPERTY)
 
-        if(server == null || port == null) {
-            onError(Exception("server/porta non presente"))
+        if(server == null) {
+            onError(Exception("server non presente"))
         }
 
         // ho tutte le informazioni necessarie, verifico che il token sia
         // ancora valido
 
         val response = Retrofit.Builder()
-                .baseUrl("http://${server}:${port}/core_main_Web_exploded/")
+                .baseUrl(server)
                 .addConverterFactory(GsonConverterFactory.create(ResponseParser.customGson))
                 .build()
                 .create(NotificatorService::class.java)

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mqtt_server_error">Server MQTT non valido</string>
+    <string name="mqtt_topic_error">Topic MQTT non valido</string>
+    <string name="sepa_server_error">Server SEPA non valido</string>
+    <string name="sepa_query_error">Query SEPA non valida</string>
+    <string name="firebase_token_error">Token firebase non disponibile, prova a chiudere e riapire l\'app</string>
+    <string name="firebase_server_error">Server FCM non valido</string>
+    <string name="notificator_size_error">Seleziona almeno un notificatore</string>
+    <string name="event_source_size_error">Seleziona almeno un event source</string>
+</resources>

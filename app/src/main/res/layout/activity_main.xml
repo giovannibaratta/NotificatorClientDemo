@@ -1,178 +1,336 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+
+<ScrollView xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/activityMainContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="it.baratta.giovanni.habitat.notificator.clientdemo.MainActivity">
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <TextView
-        android:id="@+id/activityMainConnessionMessage"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:text="Connessione in corso"
-        android:textSize="24sp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/activityMainProgressBar"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/activityMainRegistrationStatus" />
+    <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/activityMainContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context="it.baratta.giovanni.habitat.notificator.clientdemo.MainActivity"
+        tools:layout_editor_absoluteX="0dp"
+        tools:layout_editor_absoluteY="89dp">
 
-    <Button
-        android:id="@+id/activityMainDeregistrationButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="16dp"
-        android:text="DEREGISTRATI"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.606"
-        app:layout_constraintStart_toEndOf="@+id/activityMainRegistrationButton"
-        app:layout_constraintTop_toBottomOf="@+id/activityMainRegistrationStatus" />
+        <!-- PROGRESS BAR -->
 
-    <Button
-        android:id="@+id/activityMainRegistrationButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="60dp"
-        android:layout_marginTop="16dp"
-        android:text="REGISTRATI"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/activityMainRegistrationStatus" />
+        <ProgressBar
+            android:id="@+id/activityMainProgressBar"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:visibility="invisible" />
 
-    <TextView
-        android:id="@+id/activityMainRegistrationStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:text="STATO REGISTRAZIONE : REGISTRATO"
-        android:textSize="18sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/activityMainRegistrationServer" />
+        <TextView
+            android:id="@+id/activityMainConnessionMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:text="Connessione in corso"
+            android:textSize="24sp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/activityMainProgressBar"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/activityMainRegistrationStatus" />
 
-    <Switch
-        android:id="@+id/activityMainMQTTSwitch"
-        android:layout_width="110dp"
-        android:layout_height="24dp"
-        android:layout_marginStart="52dp"
-        android:layout_marginTop="40dp"
-        android:text="MQTT"
-        android:textSize="18sp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/activityMainRegistrationButton" />
+        <!-- REGISTRATION DEREGISTRATION BUTTON -->
 
-    <Switch
-        android:id="@+id/activityMainFCMSwitch"
-        android:layout_width="96dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="60dp"
-        android:layout_marginTop="8dp"
-        android:text="FCM"
-        android:textSize="18sp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/activityMainMQTTTopic" />
+        <Button
+            android:id="@+id/activityMainDeregistrationButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="16dp"
+            android:text="CANCELLA REGISTRAZIONE"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toEndOf="@+id/activityMainRegistrationButton"
+            app:layout_constraintTop_toBottomOf="@+id/activityMainRegistrationStatus" />
 
-    <EditText
-        android:id="@+id/activityMainMQTTServer"
-        android:layout_width="184dp"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="32dp"
-        android:ems="10"
-        android:hint="MQTTServer"
-        android:inputType="textPersonName"
-        android:textAlignment="center"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.636"
-        app:layout_constraintStart_toEndOf="@+id/activityMainMQTTSwitch"
-        app:layout_constraintTop_toBottomOf="@+id/activityMainDeregistrationButton" />
+        <Button
+            android:id="@+id/activityMainRegistrationButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="12dp"
+            android:text="REGISTRATI"
+            app:layout_constraintEnd_toStartOf="@+id/activityMainDeregistrationButton"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/activityMainRegistrationStatus" />
 
-    <EditText
-        android:id="@+id/activityMainMQTTTopic"
-        android:layout_width="184dp"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:layout_marginTop="8dp"
-        android:ems="10"
-        android:hint="MQTT Topic"
-        android:inputType="textPersonName"
-        android:textAlignment="center"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/activityMainMQTTServer" />
+        <TextView
+            android:id="@+id/activityMainRegistrationStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:text="STATO REGISTRAZIONE : REGISTRAZIONE"
+            android:textSize="18sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/activityMainRegistrationServer" />
 
-    <ProgressBar
-        android:id="@+id/activityMainProgressBar"
-        style="?android:attr/progressBarStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toTopOf="@id/activityMainConnessionMessage"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        tools:visibility="invisible" />
+        <!-- SEZIONE MQTT -->
 
-    <TextView
-        android:id="@+id/activityMainRegistrationServerLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="24dp"
-        android:text="Server Registrazione"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        <Switch
+            android:id="@+id/activityMainMQTTSwitch"
+            android:layout_width="0dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="24dp"
+            android:layout_marginTop="16dp"
+            android:text="MQTT"
+            android:textSize="18sp"
+            app:layout_constraintEnd_toStartOf="@+id/activityMainMQTTServer"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintHorizontal_weight="35"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/notificatorLabel" />
 
-    <EditText
-        android:id="@+id/activityMainRegistrationServer"
-        android:layout_width="104dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:ems="10"
-        android:hint="192.168.0.5"
-        android:inputType="textPersonName"
-        app:layout_constraintStart_toEndOf="@+id/activityMainRegistrationServerLabel"
-        app:layout_constraintTop_toTopOf="parent"
-        android:textAlignment="center"/>
+        <EditText
+            android:id="@+id/activityMainMQTTServer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="16dp"
+            android:ems="10"
+            android:hint="MQTTServer"
+            android:inputType="textPersonName"
+            android:textAlignment="center"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintHorizontal_weight="70"
+            app:layout_constraintStart_toEndOf="@+id/activityMainMQTTSwitch"
+            app:layout_constraintTop_toBottomOf="@+id/notificatorLabel" />
 
-    <EditText
-        android:id="@+id/activityMainRegistrationServerPort"
-        android:layout_width="71dp"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:ems="10"
-        android:hint="2000"
-        android:inputType="number"
-        android:textAlignment="center"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.024"
-        app:layout_constraintStart_toEndOf="@+id/activityMainRegistrationServer"
-        app:layout_constraintTop_toTopOf="parent" />
+        <EditText
+            android:id="@+id/activityMainMQTTTopic"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="32dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginTop="8dp"
+            android:ems="10"
+            android:hint="MQTT Topic"
+            android:inputType="textPersonName"
+            android:textAlignment="center"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/activityMainMQTTServer" />
 
-    <ProgressBar
-        android:id="@+id/activityMainRegistrationStatusProgress"
-        style="?android:attr/progressBarStyle"
-        android:layout_width="31dp"
-        android:layout_height="28dp"
-        android:progressTint="@color/colorPrimary"
-        app:layout_constraintBottom_toBottomOf="@+id/activityMainRegistrationServerPort"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/activityMainRegistrationServerPort"
-        app:layout_constraintTop_toTopOf="@+id/activityMainRegistrationServerPort" />
+        <!-- SEZIONE SEPA -->
 
-</android.support.constraint.ConstraintLayout>
+        <Switch
+            android:id="@+id/activityMainSEPASwitch"
+            android:layout_width="0dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="24dp"
+            android:layout_marginTop="16dp"
+            android:text="SEPA"
+            android:textSize="18sp"
+            app:layout_constraintEnd_toStartOf="@+id/activityMainSEPAServer"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintHorizontal_weight="30"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/eventSourceLabel" />
+
+        <EditText
+            android:id="@+id/activityMainSEPAServer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="16dp"
+            android:ems="10"
+            android:hint="SEPAServer"
+            android:inputType="textPersonName"
+            android:textAlignment="center"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintHorizontal_weight="70"
+            app:layout_constraintStart_toEndOf="@+id/activityMainSEPASwitch"
+            app:layout_constraintTop_toBottomOf="@+id/eventSourceLabel" />
+
+        <EditText
+            android:id="@+id/activityMainSEPAQuery"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="32dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginTop="8dp"
+            android:ems="10"
+            android:hint="SEPA Query"
+            android:inputType="textPersonName"
+            android:textAlignment="center"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/activityMainSEPAServer" />
+
+
+        <!-- SEZIONE PING -->
+
+        <Switch
+            android:id="@+id/activityMainPingSwitch"
+            android:layout_width="110dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="24dp"
+            android:layout_marginTop="16dp"
+            android:text="PING SOURCE"
+            android:textSize="18sp"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/activityMainSEPAQuery" />
+
+        <!-- SEZIONE FCM -->
+
+        <Switch
+            android:id="@+id/activityMainFCMSwitch"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="32dp"
+            android:layout_marginTop="32dp"
+            android:text="FCM"
+            android:textSize="18sp"
+            app:layout_constraintHorizontal_weight="30"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/activityMainMQTTTopic" />
+
+        <EditText
+            android:id="@+id/activityFCMServer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="16dp"
+            android:ems="10"
+            android:hint="FCMServer"
+            android:inputType="textPersonName"
+            android:textAlignment="center"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintHorizontal_weight="70"
+            app:layout_constraintStart_toEndOf="@+id/activityMainFCMSwitch"
+            app:layout_constraintTop_toBottomOf="@+id/activityMainMQTTTopic" />
+
+
+        <!-- REGISTRAZIONE SERVER INPUT -->
+
+        <TextView
+            android:id="@+id/activityMainRegistrationServerLabel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="4dp"
+            android:text="Server Registrazione"
+            app:layout_constraintEnd_toStartOf="@+id/activityMainRegistrationServer"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintHorizontal_chainStyle="spread"
+            app:layout_constraintHorizontal_weight="25"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <EditText
+            android:id="@+id/activityMainRegistrationServer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="4dp"
+            android:ems="10"
+            android:hint="192.168.0.5"
+            android:inputType="textPersonName"
+            android:textAlignment="center"
+            app:layout_constraintEnd_toStartOf="@+id/activityMainRegistrationStatusProgress"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintHorizontal_weight="65"
+            app:layout_constraintStart_toEndOf="@+id/activityMainRegistrationServerLabel"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ProgressBar
+            android:id="@+id/activityMainRegistrationStatusProgress"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="31dp"
+            android:layout_height="28dp"
+            android:progressTint="@color/colorPrimary"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toEndOf="@+id/activityMainRegistrationServer"
+            tools:layout_editor_absoluteY="16dp" />
+
+        <!-- SPACER -->
+
+        <ImageView
+            android:id="@+id/bottomSpacer"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="24dp"
+            android:paddingHorizontal="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/activityMainPingSwitch"
+            app:srcCompat="@android:color/darker_gray" />
+
+        <ImageView
+            android:id="@+id/topSpacer"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="24dp"
+            android:paddingHorizontal="15dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/activityMainDeregistrationButton"
+            app:srcCompat="@android:color/darker_gray" />
+
+        <TextView
+            android:id="@+id/eventSourceLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Event Source"
+            android:textColor="@android:color/background_dark"
+            android:textSize="18dp"
+            android:textStyle="bold"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/topSpacer"
+            tools:layout_editor_absoluteX="127dp"
+            tools:layout_editor_absoluteY="171dp" />
+
+        <TextView
+            android:id="@+id/notificatorLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Notificator"
+            android:textColor="@android:color/background_dark"
+            android:textSize="18dp"
+            android:textStyle="bold"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/bottomSpacer"
+            tools:layout_editor_absoluteX="127dp"
+            tools:layout_editor_absoluteY="171dp" />
+
+    </android.support.constraint.ConstraintLayout>
+</ScrollView>
